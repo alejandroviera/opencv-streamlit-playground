@@ -1,2 +1,2 @@
 
-# Face Detection using OpenCV and Streamlit
+# Playing with OpenCV and Streamlit

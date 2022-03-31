@@ -14,6 +14,7 @@ def app():
 
     if img_file_buffer is not None:
         net = load_model()
+        blur_enabled = st.checkbox("Blur faces")
         
         # Read the file and convert it to opencv Image.
         raw_bytes = np.asarray(bytearray(img_file_buffer.read()), dtype=np.uint8)
@@ -36,7 +37,7 @@ def app():
         detections = detectFaceOpenCVDnn(net, image)
 
         # Process the detections based on the current confidence threshold.
-        out_image, _ = process_detections(image, detections, conf_threshold=conf_threshold)
+        out_image, _ = process_detections(image, detections, conf_threshold=conf_threshold, blur_enabled=blur_enabled)
 
         # Display Detected faces.
         placeholders[1].image(out_image, channels='BGR')
@@ -62,7 +63,7 @@ def detectFaceOpenCVDnn(net, frame):
 
 
 # Function for annotating the image with bounding boxes for each detected face.
-def process_detections(frame, detections, conf_threshold=0.5):
+def process_detections(frame, detections, conf_threshold=0.5, blur_enabled=False):
     bboxes = []
     frame_h = frame.shape[0]
     frame_w = frame.shape[1]
@@ -76,8 +77,12 @@ def process_detections(frame, detections, conf_threshold=0.5):
             x2 = int(detections[0, 0, i, 5] * frame_w)
             y2 = int(detections[0, 0, i, 6] * frame_h)
             bboxes.append([x1, y1, x2, y2])
-            # Draw bounding boxes around detected faces.
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), bb_line_thickness, cv2.LINE_8)
+
+            if not blur_enabled:
+                # Draw bounding boxes around detected faces.
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), bb_line_thickness, cv2.LINE_8)
+            else:
+                frame = blur_face(frame, x1, y1, x2, y2)
     return frame, bboxes
 
 
@@ -97,3 +102,51 @@ def get_image_download_link(img, filename, text):
     img_str = base64.b64encode(buffered.getvalue()).decode()
     href = f'<a href="data:file/txt;base64,{img_str}" download="{filename}">{text}</a>'
     return href
+
+
+
+def blur(face, factor = 3):
+    h, w = face.shape[:2]
+    if factor < 1: factor = 1
+    if factor > 5: factor = 5
+
+    kernel_w = int(w/factor)
+    kernel_h = int(h/factor)
+
+    #ensure kernel size is odd
+    if kernel_h %2 == 0: kernel_h += 1
+    if kernel_w %2 == 0: kernel_w += 1
+
+    return cv2.GaussianBlur(face, (kernel_w, kernel_h), 0, 0)
+
+
+def pixelate(roi, pixels=16):
+    roi_h, roi_w = roi.shape[:2]
+    if roi_h > pixels and roi_w > pixels:
+        roi_small = cv2.resize(roi, (pixels, pixels), interpolation=cv2.INTER_LINEAR)
+        roi_pixelated = cv2.resize(roi_small, (roi_w, roi_h), interpolation=cv2.INTER_NEAREST)
+    else:
+        roi_pixelated = roi
+
+    return roi_pixelated
+
+
+def blur_face(image, x1: int, y1: int, x2: int, y2: int, factor=3, pixels=10):
+    img_out = image.copy()
+    img_temp = image.copy()
+    
+    correct_y1 = (y1 if y1 > 0 else 0)
+    correct_x1 = (x1 if x1 > 0 else 0)
+    face = image[correct_y1:y2, correct_x1:x2, :]
+    face = blur(face, factor=factor)
+    face = pixelate(face, pixels=pixels)
+    img_temp[correct_y1:y2, correct_x1:x2, :] = face
+
+    elliptical_mask = np.zeros(image.shape, dtype=image.dtype)
+    ellipsis_center = (x1 + (x2 - x1) / 2, y1 + (y2 - y1) / 2)
+    ellipisis_size = (x2-x1, y2-y1)
+    ellipsis_angle = 0.0
+    cv2.ellipse(elliptical_mask, (ellipsis_center, ellipisis_size, ellipsis_angle), (255, 255, 255), -1, cv2.LINE_AA)
+    
+    np.putmask(img_out, elliptical_mask, img_temp)
+    return img_out
