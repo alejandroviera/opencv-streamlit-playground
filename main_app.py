@@ -2,7 +2,7 @@ import streamlit as st
 
 # Custom imports 
 from multipage import MultiPage
-from pages import face_detection, live_face_detection, photo_signing, photo_verification, image_filters, image_restoration, billboard, panorama, object_classification
+from pages import face_detection, live_face_detection, photo_signing, photo_verification, image_filters, image_restoration, billboard, panorama, object_classification, blink_detector
 
 st.set_page_config(page_title="Computer Vision",page_icon=":eyeglasses:",layout="wide")
 hide_menu_style = """
@@ -18,6 +18,7 @@ app = MultiPage()
 # Add all your application here
 app.add_page("Photo Face Detection", face_detection.app)
 app.add_page("Video Face Detection", live_face_detection.app)
+app.add_page("Blink Detection", blink_detector.app)
 app.add_page("Sign Photo", photo_signing.app)
 app.add_page("Verify Photo Signature", photo_verification.app)
 app.add_page("Image Filters", image_filters.app)
