@@ -5,6 +5,7 @@ from streamlit_webrtc import WebRtcMode
 import av
 import cv2
 import numpy as np
+from multipage import MultiPage
 
 class VideoFaceTransformer:
     def __init__(self):
@@ -32,20 +33,21 @@ def app():
     st.markdown("<small><i>Implemented with OpenCV using a Caffe Model (Deep Learning)</i></small>", unsafe_allow_html=True)
     blur_enabled = st.checkbox("Blur faces")
     flip_enabled = st.checkbox("Flip image", value=True)
-    
-    #configuration for localhost
-    rtc_context = webrtc_streamer(key="face_video", video_processor_factory=VideoFaceTransformer, media_stream_constraints={"video": True, "audio": False})
-    
-    # configuration for Cloud environment with a TURN/STUN server
-    #RTC_CONFIGURATION = RTCConfiguration(
-    #{
-    #  "iceServers": [{
-    #    "urls": ["turn:turn.alejandroviera.com:5349"],
-    #    "username": "aviera",
-    #    "credential": "rtcpassword",
-    #  }]
-    #})
-    #rtc_context = webrtc_streamer(key="face_video", mode=WebRtcMode.SENDRECV, rtc_configuration=RTC_CONFIGURATION,video_processor_factory=VideoFaceTransformer, media_stream_constraints={"video": True, "audio": False})
+
+    if MultiPage.localhost:
+        #configuration for localhost
+        rtc_context = webrtc_streamer(key="face_video", video_processor_factory=VideoFaceTransformer, media_stream_constraints={"video": True, "audio": False})
+    else:
+        # configuration for Cloud environment with a TURN/STUN server
+        RTC_CONFIGURATION = RTCConfiguration(
+        {
+          "iceServers": [{
+            "urls": ["turn:turn.alejandroviera.com:5349"],
+            "username": "aviera",
+            "credential": "rtcpassword",
+          }]
+        })
+        rtc_context = webrtc_streamer(key="face_video", mode=WebRtcMode.SENDRECV, rtc_configuration=RTC_CONFIGURATION,video_processor_factory=VideoFaceTransformer, media_stream_constraints={"video": True, "audio": False})
 
     if rtc_context.video_processor:
         rtc_context.video_processor.blur_enabled = blur_enabled

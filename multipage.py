@@ -8,6 +8,8 @@ import streamlit as st
 
 # Define the multipage class to manage the multiple apps in our program 
 class MultiPage: 
+    localhost = True
+
     """Framework for combining multiple streamlit applications."""
 
     def __init__(self) -> None:
